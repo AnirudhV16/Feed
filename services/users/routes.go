@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/AnirudhV16/Feed/config"
 	"github.com/AnirudhV16/Feed/services/auth"
 	"github.com/AnirudhV16/Feed/types"
 	"github.com/AnirudhV16/Feed/utils"
@@ -11,10 +12,10 @@ import (
 )
 
 type Handler struct {
-	userStore *Store
+	userStore Store
 }
 
-func NewHandler(s *Store) *Handler {
+func NewHandler(s Store) *Handler {
 	return &Handler{userStore: s}
 }
 func (h *Handler) RegisterRoutes(router *mux.Router) {
@@ -52,7 +53,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Email:     payload.Email,
 		Password:  hash,
 	})
-	err = h.userStore.CreateUser(user)
+	err = h.userStore.CreateUser(*user)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
@@ -84,4 +85,12 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//created a token
+	token, err := auth.CreateJWT([]byte(config.Envs.JWTSecret), u.Id)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteResponse(w, http.StatusOK, map[string]string{"token": token})
 }

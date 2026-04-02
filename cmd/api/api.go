@@ -2,9 +2,11 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 
+	"github.com/AnirudhV16/Feed/services/follows"
+	"github.com/AnirudhV16/Feed/services/posts"
+	"github.com/AnirudhV16/Feed/services/users"
 	"github.com/gorilla/mux"
 )
 
@@ -19,15 +21,22 @@ func NewAPIServer(addr string, db *sql.DB) *APIServer {
 
 func (s *APIServer) Run() error {
 	router := mux.NewRouter()
-	subrouter := router.PathPrefix("/api/v1").subrouter()
+	subrouter := router.PathPrefix("/api/v1").Subrouter()
+
+	//user handler
+	UserStore := users.NewStore(s.db)
+	UserHandler := users.NewHandler(UserStore)
+	UserHandler.RegisterRoutes(subrouter)
+
+	//follow handler
+	FollowStore := follows.NewStore(s.db)
+	FollowHandler := follows.NewHandler(UserStore, FollowStore)
+	FollowHandler.RegisterRoutes(subrouter)
+
+	//feed handler
+	PostStore := posts.NewStore(s.db)
+	PostHandler := posts.NewHandler(PostStore, UserStore)
+	PostHandler.RegisterRoutes(subrouter)
 
 	return http.ListenAndServe(s.addr, router)
-}
-
-func (s *APIServer) InitializeDB() error {
-	err := s.db.Ping()
-	if err != nil {
-		fmt.Errorf("error connecting to db....")
-	}
-	return nil
 }
